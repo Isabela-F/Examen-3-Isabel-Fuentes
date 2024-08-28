@@ -220,23 +220,23 @@ class ProcesHidric:
        print(f"capa entrada = {inputFile}")
 
        clipRios = self.dlg.capacorte.filePath()
-       print(f"rios cortados = {clipFile}")
+       print(f"rios cortados = {clipRios}")
 
        TEMPORARY_OUTPUT = self.dlg.capacorte.filePath()
        print(f"capa salida = {TEMPORARY_OUTPUT}")
 
        print("\nComenzando Geoproceso...")
 
-       rioscorte = processing.runAndLoadResults("native:clip", {'INPUT': inputFile,'OVERLAY':clipFile,'OUTPUT':TEMPORARY_OUTPUT})
+       rioscorte = processing.runAndLoadResults("native:clip", {'INPUT': inputFile,'OVERLAY':clipRios,'OUTPUT':TEMPORARY_OUTPUT})
             
        
-       Rios1  =  iface . addVectorLayer ( clipRios [ 'OUTPUT' ],  "Red Hidrica Primaria" ,  "ogr" )
+       Rios1  =  iface . addVectorLayer ( rioscorte [ 'OUTPUT' ],  "Red Hidrica Primaria" ,  "ogr" )
        Rios1 .setSubsetString ( " Codigo = 1" )
 ​
-       Rios2  =  iface . addVectorLayer ( clipRios [ 'OUTPUT' ],  "Red Hidráulica Secundaria" ,  "ogr" )
+       Rios2  =  iface . addVectorLayer ( rioscorte [ 'OUTPUT' ],  "Red Hidráulica Secundaria" ,  "ogr" )
        Rios2 .setSubsetString ( " Codigo = 2" )
 ​
-       Rios3  =  iface . addVectorLayer ( clipRios [ 'OUTPUT' ],  "Red Hidrica Terciaria" ,  "ogr" )
+       Rios3  =  iface . addVectorLayer ( rioscorte [ 'OUTPUT' ],  "Red Hidrica Terciaria" ,  "ogr" )
        Rios3 .setSubsetString ( " Codigo = 3" )
 ​
        buffRios1 = processing.runAndLoadResults("native:buffer", {'INPUT':Rios1,
@@ -248,10 +248,49 @@ class ProcesHidric:
                                                            'JOIN_STYLE':0,'MITER_LIMIT':2,'DISSOLVE':True,
                                                            'OUTPUT':TEMPORARY_OUTPUT})
                  
-      buffRios3 = processing.runAndLoadResults("native:buffer", {'INPUT':Rios3,'DISTANCE':20,'SEGMENTS':5,'END_CAP_STYLE':0,
+       buffRios3 = processing.runAndLoadResults("native:buffer", {'INPUT':Rios3,'DISTANCE':20,'SEGMENTS':5,'END_CAP_STYLE':0,
                                                            'JOIN_STYLE':0,'MITER_LIMIT':2,'DISSOLVE':True,
                                                            'OUTPUT':TEMPORARY_OUTPUT})
       
-     print("\nGeoproceso Finalizado")
+      print("\nGeoproceso Finalizado")
+
+
+      #opocion 2 
+      cliprios = {
+       'INPUT': inputFile,
+       'OVERLAY': clipFile,
+       'OUTPUT': TEMPORARY_OUTPUT
+      }
+      capaclip = processing.run("native:clip", cliprios)['OUTPUT']
+      QgsProject.instance().addMapLayer(capaclip)
+     
+      #Filtrar y separar la capa de ríos
+      for codigo, buffers, [
+        ('1', 100),
+        ('2', 50),
+        ('3', 20),
+     ]:
+         
+     # Filtrar capa
+     filtro = capaclip.clone()
+     filtro.setName(f"{codigo}_Yoro")
+     filtro.setSubsetString(f'"Codigo" = \'{codigo}\'')
+
+     buffer_params = {
+        'INPUT': filtro,
+        'DISTANCE': buffers,
+        'SEGMENTS': 5,
+        'DISSOLVE': True,
+        'OUTPUT': TEMPORARY_OUTPUT
+     }
+     buffer_layer = processing.run("native:buffer", buffer_params)['OUTPUT']
+     buffer_layer.setName(f"Buffer_{buffers}m_{codigo}_Yoro")
+     QgsProject.instance().addMapLayer(buffer_layer)
+
+
+
+
+
+    print("\nGeoproceso Finalizado")
             
        
