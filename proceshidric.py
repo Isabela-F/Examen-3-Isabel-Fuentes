@@ -28,19 +28,25 @@ from qgis.PyQt.QtWidgets import QAction
 #Initialize Qt resources from file resources.py
 from .resources import *
 
-#Import the code for the dialog
-from .proceshidric_dialog import ProcesHidricDialog
+#Importa el codigo del dialogo
+from.ClipTool_dialog import  ClipToolDialog
 import os.path
 
-#Importar modulos de geoprocesos
-from qgis.core import *
-from qgis.analysis import QgsNativeAlgorithms
-from qgis.utils import *
 
-#Import and initialize processing:
+# Importar módulos de geoprocesos de QGIS
+from qgis.core import QgsProject, QgsVectorLayer
+from qgis.analysis import QgsNativeAlgorithms
+from qgis.utils import iface
+
+# Importar y configurar el procesamiento
 import processing
 from processing.core.Processing import Processing
 
+# Import the code for the dialog
+from .geoproceso_dialog import GeoprocesoDialog
+
+#Inicializar el entorno de procesamiento de QGIS
+Processing.initialize()
 
 class ProcesHidric:
     """QGIS Plugin Implementation."""
@@ -205,67 +211,68 @@ class ProcesHidric:
         result = self.dlg.exec_()
         # See if OK was pressed
         if result:
-            # Do something useful here - delete the line containing pass and
-            # substitute with your code.
 
-            inputFile = self.dlg.capaentrada.filePath()
-            print(f"capa entrada = (inputFile)")
 
-            clippFile = self.dlg.capaentrada.filePath()
-            print(f"capa corte primaria = (clippFile)")
+       
+       #Obtener las rutas de archivo desde el diálogo
+      
+       inputFile = self.dlg.capaentrada.filePath()
+       print(f"capa entrada = {inputFile}")
+
+       clipRios = self.dlg.capacorte.filePath()
+       print(f"rios cortados = {clipFile}")
+
+       TEMPORARY_OUTPUT = self.dlg.capacorte.filePath()
+       print(f"capa salida = {TEMPORARY_OUTPUT}")
+
+       print("\nComenzando Geoproceso...")
+
+       rioscorte = processing.runAndLoadResults("native:clip", {'INPUT': inputFile,'OVERLAY':clipFile,'OUTPUT':TEMPORARY_OUTPUT})
             
-            clipsFile = self.dlg.capaentrada.filePath()
-            print(f"capa corte secundaria = (clipsFile)")
-            
-            cliptFile = self.dlg.capaentrada.filePath()
-            print(f"capa corte terciaria = (cliptFile)")
+       
+       Rios1  =  iface . addVectorLayer ( clipRios [ 'OUTPUT' ],  "Red Hidrica Primaria" ,  "ogr" )
+       Rios1 .setSubsetString ( " Codigo = 1" )
+​
+       Rios1 . renderer () . symbol () . setColor ( QColor ( "azul oscuro" ))
+       Rios1 .triggerRepaint ( )
+       iface .layerTreeView ( ) .refreshLayerSymbology ( Rios1.id ( ) )​
+​
+    
+       Rios2  =  iface . addVectorLayer ( clipRios [ 'OUTPUT' ],  "Red Hidráulica Secundaria" ,  "ogr" )
+       Rios2 .setSubsetString ( " Codigo = 2" )
+​
+       Rios2 . renderer () . symbol () . setColor ( QColor ( "azul" ))
+       Rios2 .triggerRepaint ( )
+       iface .layerTreeView ( ) .refreshLayerSymbology ( Rios2.id ( ) )​
+​
 
-            bufferpFile = self.dlg.capaentrada.filePath()
-            print(f"capa buffer 100 = (bufferpFile)")
-
-            buffersFile = self.dlg.capaentrada.filePath()
-            print(f"capa buffer 50 = (buffersFile)")
-             
-            buffertFile = self.dlg.capaentrada.filePath()
-            print(f"capa buffer 20 = (buffertFile)")
-
-            TEMPORARY_OUTPUT = self.dlg.capasalida.filePath()
-            print(f"capa salida = (TEMPORARY_OUTPUT)")
-
-
-            print("\nComenzando Geoproceso...")
-
-
-            processing.runAndLoadResults("native:clip", {'INPUT': clippFile,'OVERLAY':clippFile,
-                                                         'OUTPUT': 'TEMPORARY_OUTPUT'})
-            
-            processing.runAndLoadResults("native:clip", {'INPUT':clipsFile,'OVERLAY':clipsFile,
-                                                         'OUTPUT': 'TEMPORARY_OUTPUT'})
-                                         
-            processing.runAndLoadResults("native:clip", {'INPUT':cliptFile ,'OVERLAY':cliptFile,
-                                                         'OUTPUT':'TEMPORARY_OUTPUT'})
-            
-
-            processing.runAndLoadResults("native:buffer", {'INPUT':bufferpFile,
+       Rios3  =  iface . addVectorLayer ( clipRios [ 'OUTPUT' ],  "Red Hidrica Terciaria" ,  "ogr" )
+       Rios3 .setSubsetString ( " Codigo = 3" )
+​
+       Rios3 . renderer () . symbol () . setColor ( QColor ( "darkCyan" ))
+       Rios3 .triggerRepaint ( )
+       iface .layerTreeView ( ) .refreshLayerSymbology ( Rios3.id ( ) )​
+​
+       buffRios1 = processing.runAndLoadResults("native:buffer", {'INPUT':Rios1,
                                                            'DISTANCE':100,'SEGMENTS':5,'END_CAP_STYLE':0,
-                                                           'JOIN_STYLE':0,'MITER_LIMIT':2,'DISSOLVE':False,
-                                                           'SEPARATE_DISJOINT':False,
-                                                           'OUTPUT':'TEMPORARY_OUTPUT'})
-
-            processing.runAndLoadResults("native:buffer", {'INPUT':buffersFile,'DISTANCE':50,'SEGMENTS':5,'END_CAP_STYLE':0,
-                                                           'JOIN_STYLE':0,'MITER_LIMIT':2,'DISSOLVE':False,
-                                                           'SEPARATE_DISJOINT':False,
-                                                           'OUTPUT':'TEMPORARY_OUTPUT'})
-            
-            processing.runAndLoadResults("native:buffer", {'INPUT':buffertFile,'DISTANCE':20,'SEGMENTS':5,'END_CAP_STYLE':0,
-                                                           'JOIN_STYLE':0,'MITER_LIMIT':2,'DISSOLVE':False,
-                                                           'SEPARATE_DISJOINT':False,  
-                                                           'OUTPUT':'TEMPORARY_OUTPUT'})
-
-
+                                                           'JOIN_STYLE':0,'MITER_LIMIT':2,'DISSOLVE':True,
+                                                           'OUTPUT':TEMPORARY_OUTPUT})
 
             
-            print("\nGeoproceso Finalizado")
+
+      buffRios2 = processing.runAndLoadResults("native:buffer", {'INPUT':Rios2,'DISTANCE':50,'SEGMENTS':5,'END_CAP_STYLE':0,
+                                                           'JOIN_STYLE':0,'MITER_LIMIT':2,'DISSOLVE':True,
+                                                           'OUTPUT':TEMPORARY_OUTPUT})
             
             
+     buffRios3 = processing.runAndLoadResults("native:buffer", {'INPUT':Rios3,'DISTANCE':20,'SEGMENTS':5,'END_CAP_STYLE':0,
+                                                           'JOIN_STYLE':0,'MITER_LIMIT':2,'DISSOLVE':True,
+                                                           'OUTPUT':TEMPORARY_OUTPUT})
+
+
+
+
             
+     print("\nGeoproceso Finalizado")
+            
+       
